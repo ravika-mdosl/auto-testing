@@ -4,12 +4,14 @@ import static com.mdo.autotest.support.CaseFormat.toLowerUnderscore;
 import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.IOException;
 
+import org.apache.commons.io.FileUtils;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ApplicationContext;
@@ -20,8 +22,10 @@ import org.springframework.test.context.support.AbstractTestExecutionListener;
 
 public class SeleniumTestExecutionListener extends AbstractTestExecutionListener
 {
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
 
 	private WebDriver webDriver;
+	
 
 	public int getOrder()
 	{
@@ -78,11 +82,23 @@ public class SeleniumTestExecutionListener extends AbstractTestExecutionListener
 	{
 		if (testContext.getTestException() != null)
 		{
-			File screenshot = ((TakesScreenshot) webDriver).getScreenshotAs(OutputType.FILE);
-			String testName = toLowerUnderscore(testContext.getTestClass().getSimpleName());
-			String methodName = toLowerUnderscore(testContext.getTestMethod().getName());
-			Files.copy(screenshot.toPath(), Paths.get("screenshots", testName + "_" + methodName + "_" + screenshot.getName()));
+			logger.error("Error in testing: {}", testContext.getTestException().getMessage());
+			
+			this.takeSnapshot(testContext);
 		}
+	}
+	/**Currently save the .png in project root dir*/
+	private void takeSnapshot(TestContext testContext) throws IOException
+	{
+		String testName = toLowerUnderscore(testContext.getTestClass().getSimpleName());
+		String methodName = toLowerUnderscore(testContext.getTestMethod().getName());		
+		
+		File sourceFile = ((TakesScreenshot) webDriver).getScreenshotAs(OutputType.FILE);
+		
+		String generateFilePath = testName + "_" + methodName + "_" + sourceFile.getName();
+		
+		File destFile = new File(generateFilePath);
+		FileUtils.copyFile(sourceFile, destFile);		
 	}
 
 }
